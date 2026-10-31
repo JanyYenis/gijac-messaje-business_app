@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "357515001011",
+    "project_id": "gijac-message-business",
+    "storage_bucket": "gijac-message-business.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:357515001011:android:9095af8cf1e9b9ab49c4c6",
+        "android_client_info": {
+          "package_name": "gijac.message.business"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDlckbz5wUC1z7fBR-0lgZjgdDpcP6Ghyo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
