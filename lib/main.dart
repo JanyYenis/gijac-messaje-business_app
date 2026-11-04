@@ -42,13 +42,15 @@ class GijacApp extends ConsumerStatefulWidget {
   ConsumerState<GijacApp> createState() => _GijacAppState();
 }
 
-class _GijacAppState extends ConsumerState<GijacApp> with WidgetsBindingObserver {
+class _GijacAppState extends ConsumerState<GijacApp>
+    with WidgetsBindingObserver {
   StreamSubscription? _deepLinkSubscription;
   final CacheService _cacheService = CacheService();
   final AppLinks _appLinks = AppLinks();
   final ApiService _apiService = ApiService();
   final PusherService _pusherService = PusherService();
-  final GlobalKey<ScaffoldMessengerState> _messengerKey = GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
@@ -79,6 +81,7 @@ class _GijacAppState extends ConsumerState<GijacApp> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) _sincronizar();
   }
+
   Timer? _debounceLista;
   Timer? _debounceResumen;
 
@@ -129,7 +132,9 @@ class _GijacAppState extends ConsumerState<GijacApp> with WidgetsBindingObserver
         deviceToken: token,
         phoneNumberId: phoneNumberId,
         onMensajeSent: (data) {
-          debugPrint('📨 Pusher mensaje.enviado: ${data['mensaje']?['wa_from']} -> ${data['mensaje']?['wa_to']} (canal $phoneNumberId)');
+          debugPrint(
+            '📨 Pusher mensaje.enviado: ${data['mensaje']?['wa_from']} -> ${data['mensaje']?['wa_to']} (canal $phoneNumberId)',
+          );
           final mensajeData = data['mensaje'] as Map<String, dynamic>?;
           if (mensajeData == null) return;
           _resumenPronto();
@@ -341,7 +346,8 @@ class _GijacAppState extends ConsumerState<GijacApp> with WidgetsBindingObserver
       darkTheme: AppTheme.dark,
       themeMode: themeMode,
       routerConfig: appRouter,
-      builder: (context, child) => AppGate(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) =>
+          AppGate(child: child ?? const SizedBox.shrink()),
     );
   }
 }

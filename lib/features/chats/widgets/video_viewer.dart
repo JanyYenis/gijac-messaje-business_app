@@ -112,19 +112,23 @@ class _VideoViewerState extends State<VideoViewer> {
                     ],
                   )
                 : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      AspectRatio(
-                        aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio,
-                        child: GestureDetector(
-                          onTap: () => c.value.isPlaying ? c.pause() : c.play(),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              VideoPlayer(c),
-                              if (!c.value.isPlaying)
-                                const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
-                            ],
+                      // Expanded + Center: el video se ajusta al alto disponible (los verticales no desbordan)
+                      Expanded(
+                        child: Center(
+                          child: AspectRatio(
+                            aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio,
+                            child: GestureDetector(
+                              onTap: () => c.value.isPlaying ? c.pause() : c.play(),
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  VideoPlayer(c),
+                                  if (!c.value.isPlaying)
+                                    const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
