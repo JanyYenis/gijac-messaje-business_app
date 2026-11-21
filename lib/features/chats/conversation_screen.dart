@@ -12,6 +12,8 @@ import 'package:record/record.dart';
 import '../../core/models/message.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
+import '../contacts/media_gallery_screen.dart';
+import 'chat_search_screen.dart';
 import '../../core/utils/time_format.dart';
 import '../../widgets/app_avatar.dart';
 import 'widgets/message_bubble.dart';
@@ -77,7 +79,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   // MODIFICADO: Ahora llama a la API real
+  bool get _puedeEnviar => ref.read(permisoEnvioProvider);
+
   void _send() {
+    if (!_puedeEnviar) return;
     final text = _controller.text;
     if (text.trim().isEmpty) return;
 
@@ -104,6 +109,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   // ------------------------------------------------------------------- audio
 
   Future<void> _iniciarGrabacion() async {
+    if (!_puedeEnviar) return;
     try {
       if (!await _grabadora.hasPermission()) {
         _aviso('Da permiso al micrófono para grabar audios.');
@@ -130,6 +136,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Future<void> _terminarGrabacion({required bool enviar}) async {
+    if (enviar && !_puedeEnviar) enviar = false; // la ventana de 24 h se cerró: se descarta el audio
     _grabacionTimer?.cancel();
     final duracion = _segundos;
     String? ruta;
@@ -312,12 +319,21 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           PopupMenuButton<String>(
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'info', child: Text('Ver contacto')),
-              PopupMenuItem(value: 'note', child: Text('Agregar nota interna')),
-              PopupMenuItem(value: 'resolve', child: Text('Marcar resuelto')),
-              PopupMenuItem(value: 'ai', child: Text('Activar respuesta IA')),
+              PopupMenuItem(value: 'search', child: Text('Buscar')),
+              PopupMenuItem(value: 'media', child: Text('Multimedia')),
+              // Pendientes por ahora: nota interna, marcar resuelto. La respuesta IA se maneja en "Ver contacto".
+              // PopupMenuItem(value: 'note', child: Text('Agregar nota interna')),
+              // PopupMenuItem(value: 'resolve', child: Text('Marcar resuelto')),
             ],
             onSelected: (v) {
               if (v == 'info') context.push('/chats/${chat.id}/contact');
+              if (v == 'search') {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatSearchScreen(chatId: chat.id)));
+              }
+              if (v == 'media') {
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => MediaGalleryScreen(chatId: chat.id, titulo: chat.contact.name)));
+              }
             },
           ),
         ],
@@ -371,6 +387,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                   ),
           ),
           _Composer(
+            permitido: ref.watch(permisoEnvioProvider),
             controller: _controller,
             onSend: _send,
             onAttach: () => _showAttachSheet(context),
@@ -403,6 +420,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   void _showAttachSheet(BuildContext context) {
+    if (!_puedeEnviar) return;
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -477,6 +495,7 @@ class _DateDivider extends StatelessWidget {
 
 class _Composer extends StatefulWidget {
   const _Composer({
+    required this.permitido,
     required this.controller,
     required this.onSend,
     required this.onAttach,
@@ -486,6 +505,7 @@ class _Composer extends StatefulWidget {
     required this.onRecordCancel,
     required this.onRecordSend,
   });
+  final bool permitido;
   final TextEditingController controller;
   final VoidCallback onSend;
   final VoidCallback onAttach;
@@ -520,6 +540,60 @@ class _ComposerState extends State<_Composer> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hayTexto = widget.controller.text.trim().isNotEmpty;
+
+    // Fuera de la ventana de 24 h de WhatsApp: texto, adjuntos, cámara y audio quedan inhabilitados
+    if (!widget.permitido) {
+      final apagado = theme.colorScheme.onSurface.withValues(alpha: 0.38);
+      return SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          color: theme.colorScheme.surface,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                child: Row(
+                  children: [
+                    Icon(Icons.lock_clock, size: 18, color: theme.colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pasaron más de 24 horas desde el último mensaje del cliente. '
+                        'WhatsApp solo permite enviarle una plantilla; hazlo desde la web.',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const IconButton(onPressed: null, icon: Icon(Icons.add_circle_outline)),
+                  const Expanded(
+                    child: TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        hintText: 'Envío no disponible',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: apagado.withValues(alpha: 0.12),
+                    child: Icon(Icons.mic, color: apagado, size: 22),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return SafeArea(
       top: false,

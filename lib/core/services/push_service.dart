@@ -61,6 +61,10 @@ class PushService {
     // App abierta: no hay notificación del sistema, se avisa dentro de la app (salvo que ya esté en ese chat)
     _subForeground = FirebaseMessaging.onMessage.listen((m) {
       debugPrint('🔔 Push recibido con la app abierta: ${m.data}');
+      if (m.data['tipo'] == 'atencion_humana') {
+        NotificationService.mostrar(m.data);
+        return;
+      }
       final chatId = m.data['chat_id']?.toString();
       if (chatId == null || chatId.isEmpty || isViewingChat(chatId)) return;
       onForeground(

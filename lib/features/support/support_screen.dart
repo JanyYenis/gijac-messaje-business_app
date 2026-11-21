@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/abrir_url.dart';
 
 import '../../widgets/section_card.dart';
 
@@ -124,15 +124,7 @@ class SupportScreen extends StatelessWidget {
       title: Text(titulo),
       subtitle: subtitulo == null ? null : Text(subtitulo),
       trailing: Icon(abrirFuera ? Icons.open_in_new : Icons.chevron_right, size: 18),
-      onTap: () async {
-        var ok = false;
-        try {
-          ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-        } catch (_) {}
-        if (!ok && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir. Intenta de nuevo.')));
-        }
-      },
+      onTap: () => abrirUrl(context, url, titulo: titulo),
     );
   }
 }

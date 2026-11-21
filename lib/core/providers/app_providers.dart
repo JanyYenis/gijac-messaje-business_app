@@ -11,6 +11,7 @@ import '../models/app_notification.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../services/mock_data.dart';
+import '../services/notification_service.dart';
 import '../services/api_service.dart';
 import '../services/ajustes_service.dart';
 import '../services/pusher_service.dart';
@@ -413,6 +414,9 @@ class PrivacySettingsNotifier extends Notifier<PrivacySettings> {
 /// Para saber si está cargando la primera vez (y mostrar el CircularIndicator)
 final isConversationLoadingProvider = StateProvider<bool>((ref) => true);
 
+/// ¿Se puede escribir al contacto del chat abierto? (ventana de 24 h de WhatsApp, calculada en el servidor)
+final permisoEnvioProvider = StateProvider<bool>((ref) => true);
+
 /// Último error de envío (la pantalla lo muestra en un aviso y lo limpia)
 final conversationErrorProvider = StateProvider<String?>((ref) => null);
 
@@ -440,6 +444,20 @@ class ConversationNotifier extends Notifier<List<Message>> {
   bool isViewingChat(String chatId) => _activeChatId == chatId;
   String? get activeChatId => _activeChatId;
 
+  /// Actualiza la ventana de 24 h con lo que responde el servidor (si no lo trae, no se toca)
+  /// Si el servidor aún no envía `permiso_envio`, se calcula con los mensajes: debe haber un mensaje
+  /// del cliente en las últimas 24 h.
+  void _aplicarPermiso(dynamic contacto, List<Message> mensajes) {
+    bool permitido;
+    if (contacto is Map && contacto['permiso_envio'] != null) {
+      permitido = contacto['permiso_envio'] == true || contacto['permiso_envio'] == 1;
+    } else {
+      final limite = DateTime.now().subtract(const Duration(hours: 24));
+      permitido = mensajes.any((m) => !m.isOutgoing && m.time.isAfter(limite));
+    }
+    ref.read(permisoEnvioProvider.notifier).state = permitido;
+  }
+
   /// Al salir de la conversación ya no se considera abierta
   void leaveChat(String chatId) {
     if (_activeChatId == chatId) _activeChatId = null;
@@ -449,6 +467,7 @@ class ConversationNotifier extends Notifier<List<Message>> {
   void receiveRealtimeMessage(String chatId, Message message, {bool isMine = false}) {
     if (_activeChatId != chatId) return;
     if (state.any((m) => m.id == message.id)) return; // evitar duplicados
+    if (!isMine) ref.read(permisoEnvioProvider.notifier).state = true; // el cliente escribió: ventana abierta
 
     // El evento en tiempo real no trae la URL del archivo ni los datos completos de los mensajes
     // propios o multimedia: se pide al servidor el mensaje completo en lugar de pintar el evento tal cual.
@@ -463,8 +482,12 @@ class ConversationNotifier extends Notifier<List<Message>> {
   /// Cargar mensajes al entrar (o reentrar) al chat
   Future<void> loadMessages(String numero) async {
     // Otro chat: no mostrar los mensajes del anterior mientras carga
-    if (_activeChatId != numero) state = [];
+    if (_activeChatId != numero) {
+      state = [];
+      ref.read(permisoEnvioProvider.notifier).state = true;
+    }
     _activeChatId = numero;
+    NotificationService.cancelarDeChat(numero);
     final loadingState = ref.read(isConversationLoadingProvider.notifier);
     loadingState.state = true;
 
@@ -485,6 +508,7 @@ class ConversationNotifier extends Notifier<List<Message>> {
 
       final List<dynamic> rawMessages = res['messages'] ?? [];
       final apiMessages = rawMessages.map((e) => Message.fromJson(e)).toList();
+      _aplicarPermiso(res['contacto'], apiMessages);
 
       // Datos frescos + los mensajes que aún se están enviando (o fallaron)
       state = [...apiMessages, ...state.where((m) => m.isLocal)];
@@ -516,6 +540,7 @@ class ConversationNotifier extends Notifier<List<Message>> {
   /// (enviado/entregado/leído) y agrega mensajes nuevos. Conserva los locales.
   Future<void> refreshSilently(String numero) async {
     if (_activeChatId != numero || _isLoadingMore) return;
+    NotificationService.cancelarDeChat(numero);
     try {
       final api = ref.read(apiServiceProvider);
       final res = await api.getChatMessages(numero);
@@ -524,6 +549,7 @@ class ConversationNotifier extends Notifier<List<Message>> {
       final nuevos = ((res['messages'] ?? []) as List)
           .map((e) => Message.fromJson(e))
           .toList();
+      _aplicarPermiso(res['contacto'], nuevos);
       if (nuevos.isEmpty) return;
 
       final porId = {for (final m in nuevos) m.id: m};

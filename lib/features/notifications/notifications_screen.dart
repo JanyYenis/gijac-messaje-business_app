@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/abrir_url.dart';
 
 import '../../core/models/app_notification.dart';
 import '../../core/providers/app_providers.dart';
@@ -68,9 +68,7 @@ class _NotificationTile extends ConsumerWidget {
     if (ruta == null) return;
     final server = await CacheService().getServerUrl();
     final url = ruta.startsWith('http') ? ruta : '${server ?? ''}${ruta.startsWith('/') ? '' : '/'}$ruta';
-    try {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (_) {}
+    if (context.mounted) await abrirUrl(context, url);
   }
 
   @override

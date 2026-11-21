@@ -37,6 +37,7 @@ class NotificationService {
 
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static const _canal = 'mensajes';
+  static const _canalHumano = 'atencion_humana';
   static const _accionResponder = 'responder';
   static const _accionLeido = 'leido';
   static bool _listo = false;
@@ -80,6 +81,14 @@ class NotificationService {
           description: 'Mensajes nuevos de tus clientes',
           importance: Importance.high,
         ));
+    await _plugin
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(const AndroidNotificationChannel(
+        _canalHumano,
+        'Atención humana',
+        description: 'Clientes que piden hablar con un asesor',
+        importance: Importance.max,
+      ));
     _listo = true;
   }
 
@@ -95,18 +104,27 @@ class NotificationService {
 
   static int _idDe(String chatId) => chatId.hashCode & 0x7fffffff;
 
+  /// Quita las notificaciones de un chat (mensajes y atención humana) al entrar a él
+  static Future<void> cancelarDeChat(String chatId) async {
+    try {
+      await _plugin.cancel(_idDe(chatId));
+      await _plugin.cancel(_idDe('humano:$chatId'));
+    } catch (_) {}
+  }
+
   static Future<void> mostrar(Map<String, dynamic> d, {bool silenciosa = false, String? textoPropio}) async {
     final titulo = d['titulo']?.toString() ?? 'Nuevo mensaje';
     final cuerpo = textoPropio ?? d['cuerpo']?.toString() ?? '';
     final chatId = d['chat_id']?.toString();
-    final id = _idDe(chatId ?? titulo);
+    final humano = d['tipo']?.toString() == 'atencion_humana';
+    final id = humano ? _idDe('humano:${chatId ?? titulo}') : _idDe(chatId ?? titulo);
 
     AndroidNotificationDetails detalles(String icono) => AndroidNotificationDetails(
-          _canal,
-          'Mensajes',
+          humano ? _canalHumano : _canal,
+          humano ? 'Atención humana' : 'Mensajes',
           icon: icono,
-          color: const Color(0xFF25D366),
-          importance: Importance.high,
+          color: humano ? const Color(0xFFFFA000) : const Color(0xFF25D366),
+          importance: humano ? Importance.max : Importance.high,
           priority: Priority.high,
           category: AndroidNotificationCategory.message,
           styleInformation: BigTextStyleInformation(cuerpo),

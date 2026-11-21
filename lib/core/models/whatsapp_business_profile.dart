@@ -12,6 +12,7 @@ class WhatsappBusinessProfile {
   final List<String> websites;
   final String? vertical;
   final List<Map<String, String>> categorias;
+  final String? avisoMeta; // si Meta no devolvió los datos del perfil
 
   const WhatsappBusinessProfile({
     required this.nombre,
@@ -26,6 +27,7 @@ class WhatsappBusinessProfile {
     this.websites = const [],
     this.vertical,
     this.categorias = const [],
+    this.avisoMeta,
   });
 
   factory WhatsappBusinessProfile.fromJson(Map<String, dynamic> j) {
@@ -42,11 +44,28 @@ class WhatsappBusinessProfile {
       foto: (j['foto'] == null || s(j['foto']).isEmpty) ? null : s(j['foto']),
       websites: ((j['websites'] as List?) ?? const []).map((e) => e.toString()).toList(),
       vertical: j['vertical']?.toString(),
+      avisoMeta: j['aviso_meta']?.toString(),
       categorias: ((j['categorias'] as List?) ?? const [])
           .map((e) => {'id': e['id'].toString(), 'nombre': e['nombre'].toString()})
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'nombre': nombre,
+        'telefono': telefono,
+        'es_prueba': esPrueba,
+        'editable': editable,
+        'about': about,
+        'address': address,
+        'description': description,
+        'email': email,
+        'foto': foto,
+        'websites': websites,
+        'vertical': vertical,
+        'categorias': categorias,
+        'aviso_meta': avisoMeta,
+      };
 
   String get categoriaNombre {
     for (final c in categorias) {

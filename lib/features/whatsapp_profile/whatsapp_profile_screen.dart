@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/whatsapp_business_profile.dart';
 import '../../core/services/api_service.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/abrir_url.dart';
 import '../../widgets/app_avatar.dart';
 import '../../widgets/section_card.dart';
 import '../../widgets/status_badge.dart';
@@ -23,6 +26,8 @@ class _WhatsappProfileScreenState extends State<WhatsappProfileScreen> {
   WhatsappBusinessProfile? _perfil;
   String? _error;
   bool _cargando = true;
+  bool _sinConexion = false; // se muestra lo guardado en el teléfono
+  static const _kCache = 'wa_business_profile_cache';
 
   @override
   void initState() {
@@ -30,18 +35,54 @@ class _WhatsappProfileScreenState extends State<WhatsappProfileScreen> {
     _cargar();
   }
 
+  Future<void> _leerCache() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final txt = sp.getString(_kCache);
+      if (txt != null && _perfil == null) {
+        final p = WhatsappBusinessProfile.fromJson(jsonDecode(txt) as Map<String, dynamic>);
+        if (mounted) setState(() => _perfil = p);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _guardarCache(WhatsappBusinessProfile p) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.setString(_kCache, jsonEncode(p.toJson()));
+    } catch (_) {}
+  }
+
+  /// Muestra al instante lo último guardado y lo pone al día con el servidor; sin internet se queda lo guardado
   Future<void> _cargar() async {
     setState(() {
       _cargando = true;
       _error = null;
     });
+    await _leerCache();
     try {
       final p = await ApiService().getWhatsappProfile();
-      if (mounted) setState(() => _perfil = p);
+      await _guardarCache(p);
+      if (mounted) {
+        setState(() {
+          _perfil = p;
+          _sinConexion = false;
+        });
+      }
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (mounted) {
+        setState(() {
+          _error = e.message;
+          _sinConexion = _perfil != null;
+        });
+      }
     } catch (_) {
-      if (mounted) setState(() => _error = 'No se pudo cargar el perfil.');
+      if (mounted) {
+        setState(() {
+          _error = 'No se pudo cargar el perfil.';
+          _sinConexion = _perfil != null;
+        });
+      }
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
@@ -53,15 +94,13 @@ class _WhatsappProfileScreenState extends State<WhatsappProfileScreen> {
     final nuevo = await Navigator.of(context).push<WhatsappBusinessProfile>(
       MaterialPageRoute(builder: (_) => EditWhatsappProfileScreen(perfil: p)),
     );
-    if (nuevo != null && mounted) setState(() => _perfil = nuevo);
-  }
-
-  Future<void> _abrir(String url) async {
-    final ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir el enlace.')));
+    if (nuevo != null && mounted) {
+      setState(() => _perfil = nuevo);
+      await _guardarCache(nuevo);
     }
   }
+
+  Future<void> _abrir(String url) => abrirUrl(context, url);
 
   String _iniciales(String nombre) {
     final partes = nombre.split(' ').where((s) => s.isNotEmpty).take(2).toList();
@@ -119,6 +158,18 @@ class _WhatsappProfileScreenState extends State<WhatsappProfileScreen> {
                           ],
                         ),
                       ),
+                      if (_sinConexion)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text('Sin conexión: mostrando la última información guardada.',
+                              textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+                        ),
+                      if (p.avisoMeta != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: Text('Meta no devolvió los datos del perfil: ${p.avisoMeta}',
+                              textAlign: TextAlign.center, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+                        ),
                       if (p.esPrueba)
                         Padding(
                           padding: const EdgeInsets.only(top: 16),

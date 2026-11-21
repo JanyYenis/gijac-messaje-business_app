@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/models/message.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/time_format.dart';
+import '../../../core/utils/whatsapp_text.dart';
 
 /// Renders a single chat message of any supported type.
 class MessageBubble extends StatelessWidget {
@@ -83,7 +84,7 @@ class MessageBubble extends StatelessWidget {
   Widget _content(BuildContext context, Color textColor) {
     switch (message.type) {
       case MessageType.text:
-        return Text(message.text ?? '',
+        return WhatsappText(message.text ?? '',
             style: TextStyle(color: textColor, height: 1.35));
       case MessageType.image:
         return _MediaPlaceholder(
@@ -299,7 +300,7 @@ class _NoteCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                         color: AppColors.noteAccent)),
                 const SizedBox(height: 2),
-                Text(message.text ?? '',
+                WhatsappText(message.text ?? '',
                     style: const TextStyle(fontSize: 13, height: 1.3)),
               ],
             ),
@@ -383,7 +384,7 @@ class _MediaPlaceholder extends StatelessWidget {
         ),
         if (caption != null) ...[
           const SizedBox(height: 6),
-          Text(caption!, style: const TextStyle(fontSize: 14, height: 1.3)),
+          WhatsappText(caption!, style: const TextStyle(fontSize: 14, height: 1.3)),
         ],
       ],
     );
@@ -516,7 +517,7 @@ class _FileTile extends StatelessWidget {
         ),
         if (message.caption != null) ...[
           const SizedBox(height: 6),
-          Text(message.caption!, style: TextStyle(color: textColor, fontSize: 14)),
+          WhatsappText(message.caption!, style: TextStyle(color: textColor, fontSize: 14)),
         ],
       ],
     );
@@ -748,7 +749,7 @@ class _ButtonsContent extends StatelessWidget {
         if (message.text != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(message.text!, style: TextStyle(color: textColor, height: 1.35)),
+            child: WhatsappText(message.text!, style: TextStyle(color: textColor, height: 1.35)),
           ),
         ...message.actions.map((a) => Container(
               width: 240,
@@ -783,7 +784,7 @@ class _ListContent extends StatelessWidget {
           if (message.text != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Text(message.text!, style: TextStyle(color: textColor, height: 1.35)),
+              child: WhatsappText(message.text!, style: TextStyle(color: textColor, height: 1.35)),
             ),
           ...message.actions.map((a) => Container(
                 margin: const EdgeInsets.only(top: 4),
@@ -829,7 +830,7 @@ class _FormContent extends StatelessWidget {
         if (message.text != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(message.text!, style: TextStyle(color: textColor, height: 1.35)),
+            child: WhatsappText(message.text!, style: TextStyle(color: textColor, height: 1.35)),
           ),
         // Si no hay texto, mostramos la tarjeta genérica de Formulario (como tu btnVerFormulario)
         if (message.text == null)
@@ -902,7 +903,7 @@ class _TemplateContent extends StatelessWidget {
         if (message.text != null)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: Text(message.text!, style: TextStyle(color: textColor, height: 1.35)),
+            child: WhatsappText(message.text!, style: TextStyle(color: textColor, height: 1.35)),
           ),
 
         // 3. BOTONES

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../../core/utils/abrir_url.dart';
 
 import '../../core/services/biometria_service.dart';
 import '../../widgets/section_card.dart';
@@ -58,10 +58,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
     }
   }
 
-  Future<void> _abrirWeb() async {
-    final ok = await launchUrl(Uri.parse(_urlPerfil), mode: LaunchMode.externalApplication);
-    if (!ok) _aviso('No se pudo abrir la página.');
-  }
+  Future<void> _abrirWeb() => abrirUrl(context, _urlPerfil, titulo: 'Mi perfil');
 
   @override
   Widget build(BuildContext context) {

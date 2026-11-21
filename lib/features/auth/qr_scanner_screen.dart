@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'dart:convert';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -166,6 +167,33 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
     }
   }
 
+  /// Alternativa a la cámara: elegir de la galería una imagen (captura o foto) que tenga el QR
+  Future<void> _desdeGaleria() async {
+    if (_isProcessing) return;
+    try {
+      final img = await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (img == null) return;
+
+      setState(() => _isProcessing = true);
+      final captura = await cameraController.analyzeImage(
+        img.path,
+        formats: const [BarcodeFormat.qrCode],
+      );
+      final codigo = (captura == null || captura.barcodes.isEmpty) ? null : captura.barcodes.first.rawValue;
+
+      if (codigo == null || codigo.isEmpty) {
+        if (mounted) setState(() => _isProcessing = false);
+        _showError('No se encontró un código QR en la imagen');
+        return;
+      }
+      await _processQRData(codigo); // al terminar libera _isProcessing
+    } catch (e) {
+      debugPrint('⚠️ No se pudo leer el QR de la imagen: $e');
+      if (mounted) setState(() => _isProcessing = false);
+      _showError('No se pudo leer la imagen');
+    }
+  }
+
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -223,6 +251,20 @@ class _QrScannerScreenState extends ConsumerState<QrScannerScreen> {
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
               onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: OutlinedButton.icon(
+                onPressed: _desdeGaleria,
+                icon: const Icon(Icons.image_outlined, color: Colors.white),
+                label: const Text('Elegir imagen del QR', style: TextStyle(color: Colors.white)),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.white54)),
+              ),
             ),
           ),
 

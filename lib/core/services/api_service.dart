@@ -428,6 +428,75 @@ class ApiService {
     }
   }
 
+  // ───────── Contacto y gestión del chat ─────────
+
+  Future<(String, String)> _sesion() async {
+    final server = await _cacheService.getServerUrl();
+    final token = await _cacheService.getDeviceToken();
+    if (server == null || token == null) throw Exception('No hay sesión activa');
+    return (server, token);
+  }
+
+  /// GET /chats/{numero}/detalle - nombre, chatbot e IA del contacto
+  Future<Map<String, dynamic>> getContactoDetalle(String numero) async {
+    final (server, token) = await _sesion();
+    final r = await http
+        .get(Uri.parse('$server/api/mobile/chats/$numero/detalle'), headers: _authHeaders(token))
+        .timeout(const Duration(seconds: 20));
+    final body = jsonDecode(r.body);
+    if (r.statusCode == 200 && body['success'] == true) return Map<String, dynamic>.from(body['data']);
+    throw ApiException(body['message']?.toString() ?? 'No se pudo cargar el contacto', statusCode: r.statusCode);
+  }
+
+  /// PUT /chats/{numero}/automatizacion - campo: 'chatbot' | 'ia'
+  Future<void> setAutomatizacion(String numero, {required String campo, required bool activo}) async {
+    final (server, token) = await _sesion();
+    final r = await http
+        .put(
+          Uri.parse('$server/api/mobile/chats/$numero/automatizacion'),
+          headers: _authHeaders(token),
+          body: jsonEncode({'campo': campo, 'activo': activo}),
+        )
+        .timeout(const Duration(seconds: 20));
+    if (r.statusCode == 200 && jsonDecode(r.body)['success'] == true) return;
+    String msg = 'No se pudo guardar el cambio';
+    try {
+      msg = jsonDecode(r.body)['message']?.toString() ?? msg;
+    } catch (_) {}
+    throw ApiException(msg, statusCode: r.statusCode);
+  }
+
+  /// GET /chats/{numero}/multimedia - tipo: 'media' (imágenes y videos) | 'documentos'
+  Future<List<Message>> getMultimedia(String numero, {String tipo = 'media', String? beforeId, int limit = 60}) async {
+    final (server, token) = await _sesion();
+    var q = 'tipo=$tipo&limit=$limit';
+    if (beforeId != null) q += '&before_id=$beforeId';
+    final r = await http
+        .get(Uri.parse('$server/api/mobile/chats/$numero/multimedia?$q'), headers: _authHeaders(token))
+        .timeout(const Duration(seconds: 30));
+    final body = jsonDecode(r.body);
+    if (r.statusCode == 200 && body['success'] == true) {
+      return ((body['data'] ?? []) as List).map((m) => Message.fromJson(_conUrlAbsoluta(m, server))).toList();
+    }
+    throw ApiException(body['message']?.toString() ?? 'No se pudo cargar la multimedia', statusCode: r.statusCode);
+  }
+
+  /// GET /chats/{numero}/buscar?q=
+  Future<List<Message>> buscarMensajes(String numero, String texto) async {
+    final (server, token) = await _sesion();
+    final r = await http
+        .get(
+          Uri.parse('$server/api/mobile/chats/$numero/buscar?q=${Uri.encodeQueryComponent(texto)}'),
+          headers: _authHeaders(token),
+        )
+        .timeout(const Duration(seconds: 30));
+    final body = jsonDecode(r.body);
+    if (r.statusCode == 200 && body['success'] == true) {
+      return ((body['data'] ?? []) as List).map((m) => Message.fromJson(_conUrlAbsoluta(m, server))).toList();
+    }
+    throw ApiException(body['message']?.toString() ?? 'No se pudo buscar', statusCode: r.statusCode);
+  }
+
   Map<String, String> _authHeaders(String token) {
     return {
       'Authorization': 'Bearer $token',

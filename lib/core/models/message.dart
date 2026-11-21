@@ -262,7 +262,12 @@ class Message {
   }
 
   static List<MessageAction> _getActions(MessageType tipo, Map<String, dynamic> meta) {
-    if (!meta.containsKey('interactive')) return [];
+    // La IA y el chatbot por nodos guardan las opciones en metadata['buttons'] (texto JSON)
+    if (!meta.containsKey('interactive')) {
+      return (tipo == MessageType.buttons || tipo == MessageType.list)
+          ? _accionesDeButtons(meta['buttons'])
+          : [];
+    }
     
     final interactive = meta['interactive'];
     final List<MessageAction> actions = [];
@@ -283,6 +288,20 @@ class Message {
     }
     
     return actions;
+  }
+
+  static List<MessageAction> _accionesDeButtons(dynamic raw) {
+    try {
+      final lista = raw is String ? jsonDecode(raw) : raw;
+      if (lista is! List) return [];
+      return [
+        for (final b in lista)
+          if (b is Map && (b['text'] ?? '').toString().isNotEmpty)
+            MessageAction(label: b['text'].toString(), description: b['description']?.toString()),
+      ];
+    } catch (_) {
+      return [];
+    }
   }
 
   /// ---------------------------------------------------------------------------

@@ -3,12 +3,12 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/providers/app_providers.dart';
 import '../../core/providers/user_provider.dart';
 import '../../core/router/app_router.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/abrir_url.dart';
 import '../../core/services/cache_service.dart';
 import '../../widgets/app_avatar.dart';
 import '../../widgets/section_card.dart';
@@ -18,15 +18,7 @@ class SettingsScreen extends ConsumerWidget {
 
   static const _webChatbots = 'https://message-business.gijac.com/chatbots';
 
-  Future<void> _abrirWeb(BuildContext context, String url) async {
-    var ok = false;
-    try {
-      ok = await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } catch (_) {}
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo abrir la página.')));
-    }
-  }
+  Future<void> _abrirWeb(BuildContext context, String url) => abrirUrl(context, url);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
